@@ -1,184 +1,200 @@
-import 'dotenv/config';
-import fs from 'fs';
+/**
+ * 🌙 Eclipsera Management Bot — v7 Final
+ * create by @Eclipsera_Team
+ */
+
 import pkg from 'discord.js';
+import dotenv from 'dotenv';
+import fs from 'fs';
+dotenv.config();
+
 const {
   Client,
   GatewayIntentBits,
-  IntentsBitField,
-  EmbedBuilder,
   Partials,
+  EmbedBuilder,
+  PermissionsBitField,
+  Events
 } = pkg;
 
-// --- FIX: Kompatibilitas semua versi Discord.js ---
-const INTENTS =
-  GatewayIntentBits?.Guilds
-    ? [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-      ]
-    : [
-        IntentsBitField.Flags.Guilds,
-        IntentsBitField.Flags.GuildMessages,
-        IntentsBitField.Flags.MessageContent,
-      ];
-
+// ==== CLIENT SETUP ====
 const client = new Client({
-  intents: INTENTS,
-  partials: [Partials.Message, Partials.Channel],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers,
+  ],
+  partials: [Partials.Channel, Partials.Message],
 });
 
-// === LOAD CONFIG DARI FILE ===
-const CONFIG_PATH = './config.json';
-let channels = {
-  announcement: null,
-  event: null,
-  catalog: null,
-  rules: null,
-  log: null,
+// ==== CONFIG CHANNELS ====
+const configPath = './config.json';
+let config = {
+  announcementChannel: null,
+  eventChannel: null,
+  catalogChannel: null,
+  rulesChannel: null,
+  logChannel: null,
 };
 
-// Coba load config.json jika ada
-if (fs.existsSync(CONFIG_PATH)) {
+// Load config jika ada
+if (fs.existsSync(configPath)) {
   try {
-    const data = fs.readFileSync(CONFIG_PATH, 'utf8');
-    channels = JSON.parse(data);
-    console.log('✅ Config loaded:', channels);
-  } catch (err) {
-    console.error('❌ Gagal load config.json:', err);
+    config = JSON.parse(fs.readFileSync(configPath));
+    console.log('✅ Config loaded');
+  } catch {
+    console.error('❌ Gagal load config.json');
   }
 }
 
-// === FUNGSI SAVE CONFIG ===
+// Save config helper
 function saveConfig() {
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(channels, null, 2));
-  console.log('💾 Config saved!');
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 }
 
-// === BOT READY ===
-client.once('ready', () => {
+// ==== READY / CLIENTREADY ADAPTIVE ====
+const readyEventName = Events?.ClientReady || 'clientReady';
+client.once(readyEventName, () => {
   console.log(`✅ Bot aktif sebagai ${client.user.tag}`);
-  client.user.setActivity('Create by @Eclipsera_Team', { type: 3 });
+  client.user.setActivity('create by @Eclipsera_Team', { type: 3 });
+
+  // Log online ke log channel
+  if (config.logChannel) {
+    const log = client.channels.cache.get(config.logChannel);
+    if (log) log.send({
+      embeds: [new EmbedBuilder()
+        .setTitle('🟢 Bot Online')
+        .setDescription(`Bot berhasil dijalankan pada ${new Date().toLocaleString()}`)
+        .setColor('#57F287')
+        .setFooter({ text: 'create by @Eclipsera_Team' })
+        .setTimestamp()]
+    });
+  }
 });
 
-// === HANDLE COMMAND ===
+// ==== COMMAND HANDLER ====
 client.on('messageCreate', async (message) => {
-  if (message.author.bot) return;
-  if (!message.content.startsWith('!')) return;
-
-  const [cmd, arg] = message.content.slice(1).split(/\s+/);
+  if (!message.content.startsWith('e!') || message.author.bot) return;
+  const args = message.content.slice(2).trim().split(/ +/);
+  const command = args.shift().toLowerCase();
 
   // --- SET CHANNEL ---
-  if (cmd === 'set') {
-    if (!message.member.permissions.has('Administrator'))
-      return message.reply('❌ Kamu tidak punya izin untuk ini.');
+  if (command === 'setchannel') {
+    if (!message.member.permissions.has(PermissionsBitField.Flags.ManageGuild))
+      return message.reply('❌ Kamu tidak punya izin.');
 
-    if (!arg)
-      return message.reply(
-        'Gunakan: `!set <announcement|event|catalog|rules|log>` di channel yang diinginkan.'
-      );
+    const [type] = args;
+    const channel = message.mentions.channels.first();
+    if (!type || !channel)
+      return message.reply('Gunakan: `e!setchannel <type> #channel`');
 
-    if (!channels.hasOwnProperty(arg))
-      return message.reply('❌ Jenis channel tidak valid.');
+    if (config.hasOwnProperty(`${type}Channel`)) {
+      config[`${type}Channel`] = channel.id;
+      saveConfig();
+      message.reply(`✅ Channel **${type}** diset ke ${channel}`);
 
-    channels[arg] = message.channel.id;
-    saveConfig();
-    message.reply(`✅ Channel ${arg} telah diatur ke <#${message.channel.id}>`);
+      // Auto backup log
+      if (config.logChannel) {
+        client.channels.cache.get(config.logChannel)?.send({
+          embeds: [new EmbedBuilder()
+            .setTitle('⚙️ Config Updated')
+            .setDescription(`**${message.author.tag}** mengatur **${type}** ke ${channel}`)
+            .addFields({ name: '📁 Config Backup', value: '```json\n' + JSON.stringify(config, null, 2) + '\n```' })
+            .setColor('#5865F2')
+            .setFooter({ text: 'create by @Eclipsera_Team' })
+            .setTimestamp()]
+        });
+      }
+    } else message.reply('❌ Jenis channel tidak valid.');
   }
 
   // --- UNSET CHANNEL ---
-  if (cmd === 'unset') {
-    if (!message.member.permissions.has('Administrator'))
-      return message.reply('❌ Kamu tidak punya izin untuk ini.');
+  if (command === 'unsetchannel') {
+    const [type] = args;
+    if (!type || !config.hasOwnProperty(`${type}Channel`))
+      return message.reply('Gunakan: `e!unsetchannel <type>`');
 
-    if (!arg)
-      return message.reply(
-        'Gunakan: `!unset <announcement|event|catalog|rules|log>`'
-      );
-
-    if (!channels.hasOwnProperty(arg))
-      return message.reply('❌ Jenis channel tidak valid.');
-
-    channels[arg] = null;
+    config[`${type}Channel`] = null;
     saveConfig();
-    message.reply(`❎ Channel ${arg} telah dihapus dari pengaturan.`);
-  }
+    message.reply(`✅ Channel **${type}** dihapus.`);
 
-  // --- HELP MENU ---
-  if (cmd === 'help') {
-    const embed = new EmbedBuilder()
-      .setTitle('📜 Eclipsera Management Bot Help')
-      .setDescription(
-        [
-          'Gunakan perintah berikut untuk mengatur bot:',
-          '',
-          '`!set <tipe>` → Atur channel (announcement, event, catalog, rules, log)',
-          '`!unset <tipe>` → Hapus pengaturan channel',
-          '`!create <tipe>` → Kirim pengumuman/event/catalog/rules',
-          '',
-          '💡 Kamu juga bisa kirim gambar saat `!create`, bot akan otomatis ambil dari attachment.',
-        ].join('\n')
-      )
-      .setColor('#5865F2')
-      .setFooter({ text: 'create by @Eclipsera_Team' });
-    return message.reply({ embeds: [embed] });
-  }
-
-  // --- CREATE CONTENT ---
-  if (cmd === 'create') {
-    const type = arg;
-    if (!['announcement', 'event', 'catalog', 'rules'].includes(type))
-      return message.reply('❌ Jenis tidak valid.');
-
-    const target = channels[type];
-    if (!target)
-      return message.reply(
-        `❌ Channel untuk **${type}** belum diatur. Gunakan \`!set ${type}\`.`
-      );
-
-    const filter = (m) => m.author.id === message.author.id;
-    await message.reply(
-      `✍️ Ketik isi untuk **${type}** (bisa kirim teks dan gambar).`
-    );
-
-    try {
-      const collected = await message.channel.awaitMessages({
-        filter,
-        max: 1,
-        time: 60000,
-        errors: ['time'],
+    if (config.logChannel) {
+      client.channels.cache.get(config.logChannel)?.send({
+        embeds: [new EmbedBuilder()
+          .setTitle('⚙️ Config Removed')
+          .setDescription(`**${message.author.tag}** menghapus pengaturan **${type}**`)
+          .addFields({ name: '📁 Config Backup', value: '```json\n' + JSON.stringify(config, null, 2) + '\n```' })
+          .setColor('#ED4245')
+          .setFooter({ text: 'create by @Eclipsera_Team' })
+          .setTimestamp()]
       });
-
-      const content = collected.first();
-      const text = content.content || '';
-      const attachment = content.attachments.first();
-
-      const embed = new EmbedBuilder()
-        .setTitle(`📢 ${type.toUpperCase()}`)
-        .setDescription(`${text}\n\n‎`) // pakai karakter invisible agar ada spasi
-        .setColor('#2B2D31')
-        .setFooter({ text: 'create by @Eclipsera_Team' })
-        .setTimestamp();
-
-      if (attachment) embed.setImage(attachment.url);
-
-      await message.guild.channels.cache.get(target).send({ embeds: [embed] });
-      message.reply(`✅ ${type} telah dikirim ke <#${target}>`);
-
-      // Log message
-      if (channels.log) {
-        const logEmbed = new EmbedBuilder()
-          .setTitle('🧾 Log')
-          .setDescription(
-            `**${message.author.tag}** membuat **${type}** di <#${target}>`
-          )
-          .setColor('#808080');
-        client.channels.cache.get(channels.log).send({ embeds: [logEmbed] });
-      }
-    } catch (err) {
-      return message.reply('⏰ Waktu habis, buat ulang dengan `!create <tipe>`.');
     }
+  }
+
+  // --- CREATE EVENT / ANNOUNCEMENT / CATALOG / RULES ---
+  if (['createevent','createannouncement','createcatalog','createrules'].includes(command)) {
+    const type = command.replace('create','').toLowerCase();
+    const filter = (m) => m.author.id === message.author.id;
+    
+    const ask = async (q) => {
+      await message.channel.send(q);
+      const collected = await message.channel.awaitMessages({ filter, max: 1, time: 60000 });
+      return collected.first()?.content || null;
+    };
+
+    const title = await ask('📝 Judul:');
+    const description = await ask('📜 Deskripsi (optional):');
+    await message.channel.send('📷 Kirim gambar (optional atau ketik skip):');
+    const imgMsg = await message.channel.awaitMessages({ filter, max: 1, time: 60000 });
+    const image = imgMsg.first()?.attachments.first()?.url || null;
+
+    const embed = new EmbedBuilder()
+      .setTitle(title || 'Tanpa Judul')
+      .setDescription(description || '*Tidak ada deskripsi*')
+      .setColor('#2B2D31')
+      .setFooter({ text: 'create by @Eclipsera_Team' })
+      .setTimestamp();
+
+    if (image) embed.setImage(image);
+
+    const targetChannel = config[`${type}Channel`] ? message.guild.channels.cache.get(config[`${type}Channel`]) : message.channel;
+    targetChannel.send({ embeds: [embed] });
+
+    if (config.logChannel)
+      client.channels.cache.get(config.logChannel)?.send({
+        embeds: [new EmbedBuilder()
+          .setTitle('🧾 Log')
+          .setDescription(`**${message.author.tag}** membuat **${type}**`)
+          .setColor('#808080')
+          .setTimestamp()]
+      });
+  }
+
+  // --- STATUS ---
+  if (command === 'status') {
+    message.reply(`✅ Bot aktif sebagai ${client.user.tag}\nVersion: v7 final\nGuilds: ${client.guilds.cache.size}`);
+  }
+
+  // --- HELP ---
+  if (command === 'help') {
+    message.reply({
+      embeds: [new EmbedBuilder()
+        .setTitle('📘 Eclipsera Bot Help')
+        .setDescription([
+          '🧩 **Perintah utama:**',
+          '`e!setchannel <type> #channel` – Atur channel',
+          '`e!unsetchannel <type>` – Hapus channel',
+          '`e!create<type>` – Buat konten: event, announcement, catalog, rules',
+          '`e!status` – Cek status bot',
+          '',
+          '💡 Kamu bisa kirim gambar saat create, bot otomatis ambil dari attachment'
+        ].join('\n'))
+        .setColor('#5865F2')
+        .setFooter({ text: 'create by @Eclipsera_Team' })]
+    });
   }
 });
 
+// ==== LOGIN ====
 client.login(process.env.TOKEN);
