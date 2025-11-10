@@ -1,5 +1,5 @@
 /**
- * 🌙 Eclipsera Management Bot — v7 Final
+ * 🌙 Eclipsera Management Bot — v3 Final
  * create by @Eclipsera_Team
  */
 
@@ -38,17 +38,12 @@ let config = {
   logChannel: null,
 };
 
-// Load config jika ada
+// Load config
 if (fs.existsSync(configPath)) {
-  try {
-    config = JSON.parse(fs.readFileSync(configPath));
-    console.log('✅ Config loaded');
-  } catch {
-    console.error('❌ Gagal load config.json');
-  }
+  try { config = JSON.parse(fs.readFileSync(configPath)); } 
+  catch { console.error('❌ Gagal load config.json'); }
 }
 
-// Save config helper
 function saveConfig() {
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 }
@@ -59,7 +54,6 @@ client.once(readyEventName, () => {
   console.log(`✅ Bot aktif sebagai ${client.user.tag}`);
   client.user.setActivity('create by @Eclipsera_Team', { type: 3 });
 
-  // Log online ke log channel
   if (config.logChannel) {
     const log = client.channels.cache.get(config.logChannel);
     if (log) log.send({
@@ -75,7 +69,7 @@ client.once(readyEventName, () => {
 
 // ==== COMMAND HANDLER ====
 client.on('messageCreate', async (message) => {
-  if (!message.content.startsWith('e!') || message.author.bot) return;
+  if (!message.content.startsWith('m1') || message.author.bot) return;
   const args = message.content.slice(2).trim().split(/ +/);
   const command = args.shift().toLowerCase();
 
@@ -87,20 +81,18 @@ client.on('messageCreate', async (message) => {
     const [type] = args;
     const channel = message.mentions.channels.first();
     if (!type || !channel)
-      return message.reply('Gunakan: `e!setchannel <type> #channel`');
+      return message.reply('Gunakan: `m1setchannel <type> #channel`');
 
     if (config.hasOwnProperty(`${type}Channel`)) {
       config[`${type}Channel`] = channel.id;
       saveConfig();
       message.reply(`✅ Channel **${type}** diset ke ${channel}`);
 
-      // Auto backup log
       if (config.logChannel) {
         client.channels.cache.get(config.logChannel)?.send({
           embeds: [new EmbedBuilder()
             .setTitle('⚙️ Config Updated')
             .setDescription(`**${message.author.tag}** mengatur **${type}** ke ${channel}`)
-            .addFields({ name: '📁 Config Backup', value: '```json\n' + JSON.stringify(config, null, 2) + '\n```' })
             .setColor('#5865F2')
             .setFooter({ text: 'create by @Eclipsera_Team' })
             .setTimestamp()]
@@ -113,7 +105,7 @@ client.on('messageCreate', async (message) => {
   if (command === 'unsetchannel') {
     const [type] = args;
     if (!type || !config.hasOwnProperty(`${type}Channel`))
-      return message.reply('Gunakan: `e!unsetchannel <type>`');
+      return message.reply('Gunakan: `m1unsetchannel <type>`');
 
     config[`${type}Channel`] = null;
     saveConfig();
@@ -124,7 +116,6 @@ client.on('messageCreate', async (message) => {
         embeds: [new EmbedBuilder()
           .setTitle('⚙️ Config Removed')
           .setDescription(`**${message.author.tag}** menghapus pengaturan **${type}**`)
-          .addFields({ name: '📁 Config Backup', value: '```json\n' + JSON.stringify(config, null, 2) + '\n```' })
           .setColor('#ED4245')
           .setFooter({ text: 'create by @Eclipsera_Team' })
           .setTimestamp()]
@@ -132,11 +123,11 @@ client.on('messageCreate', async (message) => {
     }
   }
 
-  // --- CREATE EVENT / ANNOUNCEMENT / CATALOG / RULES ---
+  // --- CREATE CONTENT ---
   if (['createevent','createannouncement','createcatalog','createrules'].includes(command)) {
     const type = command.replace('create','').toLowerCase();
     const filter = (m) => m.author.id === message.author.id;
-    
+
     const ask = async (q) => {
       await message.channel.send(q);
       const collected = await message.channel.awaitMessages({ filter, max: 1, time: 60000 });
@@ -173,26 +164,26 @@ client.on('messageCreate', async (message) => {
 
   // --- STATUS ---
   if (command === 'status') {
-    message.reply(`✅ Bot aktif sebagai ${client.user.tag}\nVersion: v7 final\nGuilds: ${client.guilds.cache.size}`);
+    message.reply(`✅ Bot aktif sebagai ${client.user.tag}\nVersion: v3 final\nGuilds: ${client.guilds.cache.size}`);
   }
 
   // --- HELP ---
   if (command === 'help') {
-    message.reply({
-      embeds: [new EmbedBuilder()
-        .setTitle('📘 Eclipsera Bot Help')
-        .setDescription([
-          '🧩 **Perintah utama:**',
-          '`e!setchannel <type> #channel` – Atur channel',
-          '`e!unsetchannel <type>` – Hapus channel',
-          '`e!create<type>` – Buat konten: event, announcement, catalog, rules',
-          '`e!status` – Cek status bot',
-          '',
-          '💡 Kamu bisa kirim gambar saat create, bot otomatis ambil dari attachment'
-        ].join('\n'))
-        .setColor('#5865F2')
-        .setFooter({ text: 'create by @Eclipsera_Team' })]
-    });
+    const embed = new EmbedBuilder()
+      .setTitle('📘 Eclipsera Bot Help')
+      .setColor('#5865F2')
+      .setFooter({ text: 'create by @Eclipsera_Team' })
+      .addFields(
+        { name: '🧩 Channel Management', value: '`m1setchannel <type> #channel`\n`m1unsetchannel <type>`', inline: false },
+        { name: '📝 Create Content', value:
+          '`m1createevent` – Buat Event\n' +
+          '`m1createannouncement` – Buat Pengumuman\n' +
+          '`m1createcatalog` – Buat Catalog / Produk\n' +
+          '`m1createrules` – Buat Rules / Note', inline: false
+        },
+        { name: 'ℹ️ Info', value: '`m1status` – Cek bot aktif\n\n💡 Kamu bisa kirim gambar saat create, bot otomatis ambil dari attachment', inline: false }
+      );
+    message.reply({ embeds: [embed] });
   }
 });
 
