@@ -1,7 +1,7 @@
 {
-  "announcement": null,
-  "event": null,
-  "catalog": null,
-  "rules": null,
-  "log": null
+  "announcementChannel": null,
+  "eventChannel": null,
+  "catalogChannel": null,
+  "rulesChannel": null,
+  "logChannel": null
 }
