@@ -159,11 +159,23 @@ client.on('messageCreate', async (message) => {
       });
   }
 
-  // ==== STATUS & HELP ====
+  // ==== STATUS ====
   if (command === 'status') {
-    message.reply(`Bot active ✅ ${client.user.tag}\nVersion: v3.2.5\nGuilds: ${client.guilds.cache.size}`);
+    const embed = new EmbedBuilder()
+      .setTitle('✅ Bot Active')
+      .setColor('#57F287')
+      .addFields(
+        { name: 'Version', value: '3.3.7', inline: true },
+        { name: 'Guilds', value: `${client.guilds.cache.size}`, inline: true },
+        { name: 'Developer', value: '<@1082466641201344633>', inline: false }
+      )
+      .setFooter({ text: 'create by @shdowtyrant_' })
+      .setTimestamp();
+
+    message.reply({ embeds: [embed] });
   }
 
+  // ==== HELP ====
   if (command === 'help') {
     const embed = new EmbedBuilder()
       .setTitle('📘 Eclipsera Bot Help')
@@ -191,5 +203,3 @@ client.on('messageCreate', async (message) => {
 
 // ==== LOGIN ====
 client.login(process.env.TOKEN);
-
-
