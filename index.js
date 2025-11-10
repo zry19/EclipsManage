@@ -1,5 +1,5 @@
 /**
- * 🌙 Eclipsera Management Bot — v3.1 Final
+ * 🌙 Eclipsera Management Bot — v3.3.5 Final
  * create by @Eclipsera_Team
  */
 
@@ -52,7 +52,7 @@ const readyEventName = Events?.ClientReady || 'clientReady';
 client.once(readyEventName, () => {
   console.log(`✅ Bot aktif sebagai ${client.user.tag}`);
   client.user.setActivity('create by @Eclipsera_Team', { type: 3 });
-  
+
   if (config.logChannel) {
     const log = client.channels.cache.get(config.logChannel);
     if (log) log.send({
@@ -75,7 +75,6 @@ client.on('messageCreate', async (message) => {
   // ==== DYNAMIC SET / UNSET PER CHANNEL ====
   const channelTypes = ['log','event','announcement','catalog','rules'];
 
-  // Generate set/unset commands
   for (const type of channelTypes) {
     if (command === `set${type}`) {
       if (!message.member.permissions.has(PermissionsBitField.Flags.ManageGuild))
@@ -162,7 +161,7 @@ client.on('messageCreate', async (message) => {
 
   // ==== STATUS & HELP ====
   if (command === 'status') {
-    message.reply(`✅ Bot aktif sebagai ${client.user.tag}\nVersion: v3.1 final\nGuilds: ${client.guilds.cache.size}`);
+    message.reply(`✅ Bot aktif sebagai ${client.user.tag}\nVersion: v3.3.5 final\nGuilds: ${client.guilds.cache.size}`);
   }
 
   if (command === 'help') {
