@@ -161,7 +161,7 @@ client.on('messageCreate', async (message) => {
 
   // ==== STATUS & HELP ====
   if (command === 'status') {
-    message.reply(`✅ Bot aktif sebagai ${client.user.tag}\nVersion: v3.3.5 final\nGuilds: ${client.guilds.cache.size}`);
+    message.reply(`✅ Bot aktif sebagai ${client.user.tag}\nVersion: v3.2.5\nGuilds: ${client.guilds.cache.size}`);
   }
 
   if (command === 'help') {
@@ -191,3 +191,4 @@ client.on('messageCreate', async (message) => {
 
 // ==== LOGIN ====
 client.login(process.env.TOKEN);
+
