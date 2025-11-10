@@ -1,6 +1,20 @@
 {
   "name": "eclipsera-bot",
   "version": "1.0.0",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.15.3",
+    "dotenv": "^16.3.1"
+  }
+}
+
+{
+  "name": "eclipsera-bot",
+  "version": "1.0.0",
   "description": "Eclipsera Management Smart Prompt Bot",
   "main": "index.js",
   "scripts": {
